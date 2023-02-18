@@ -22,8 +22,8 @@ import torch
 import collections
 from abc import ABCMeta, abstractmethod
 
-from anchors import Anchors
-from network_base import NetworkBase
+from .anchors import Anchors
+from .network_base import NetworkBase
 
 
 
@@ -103,11 +103,11 @@ IMG_SIZE = (480, 640)
 HEATMAP_SIZE = (29, 39)
 TEMPLATE_SIZE = 124
 
-PREPROCESS = [transforms.Compose([transforms.Scale(IMG_SIZE[0]), transforms.ToTensor(), normalize]),
-              transforms.Compose([transforms.Scale(TEMPLATE_SIZE), transforms.ToTensor(), normalize]),
-              transforms.Compose([transforms.Scale(TEMPLATE_SIZE), transforms.ToTensor()]),
-              transforms.Compose([transforms.Scale(TEMPLATE_SIZE), transforms.ToTensor(), normalize]),
-              transforms.Compose([transforms.Scale(TEMPLATE_SIZE), transforms.ToTensor()])
+PREPROCESS = [transforms.Compose([transforms.Resize(IMG_SIZE[0]), transforms.ToTensor(), normalize]),
+              transforms.Compose([transforms.Resize(TEMPLATE_SIZE), transforms.ToTensor(), normalize]),
+              transforms.Compose([transforms.Resize(TEMPLATE_SIZE), transforms.ToTensor()]),
+              transforms.Compose([transforms.Resize(TEMPLATE_SIZE), transforms.ToTensor(), normalize]),
+              transforms.Compose([transforms.Resize(TEMPLATE_SIZE), transforms.ToTensor()])
               ]
 
 eps = 0.00001
@@ -222,10 +222,9 @@ class TemplateFeatExtractGlobal(nn.Module):
 
         # new conv with 4 channels and already trained weights
         new_conv_0 = nn.Conv2d(4, 64, kernel_size=3, stride=2)
-        new_conv_0.weight[:, :3, :, :] = modules[0].weight
-        new_conv_0.weight = nn.Parameter(new_conv_0.weight)
-        new_conv_0.bias = modules[0].bias
-        new_conv_0.bias = nn.Parameter(new_conv_0.bias)
+        new_conv_0_weights = new_conv_0.state_dict()['weight']
+        new_conv_0_weights[:, :3, :, :] = modules[0].weight
+        new_conv_0.load_state_dict({'weight': new_conv_0_weights, 'bias': modules[0].bias})
         self.backbone_0 = torch.nn.Sequential(new_conv_0)
 
         self.backbone_1 = torch.nn.Sequential(*modules[1:5])
@@ -267,10 +266,9 @@ class TemplateFeatExtract(nn.Module):
         modules = list(list(self.backbone.children())[0])
 
         new_conv_0 = nn.Conv2d(4, 64, kernel_size=3, stride=2)
-        new_conv_0.weight[:, :3, :, :] = modules[0].weight
-        new_conv_0.weight = nn.Parameter(new_conv_0.weight)
-        new_conv_0.bias = modules[0].bias
-        new_conv_0.bias = nn.Parameter(new_conv_0.bias)
+        new_conv_0_weights = new_conv_0.state_dict()['weight']
+        new_conv_0_weights[:, :3, :, :] = modules[0].weight
+        new_conv_0.load_state_dict({'weight': new_conv_0_weights, 'bias': modules[0].bias})
         self.backbone_0 = torch.nn.Sequential(new_conv_0)
 
         self.backbone_1 = torch.nn.Sequential(*modules[1:5])
@@ -518,12 +516,14 @@ class Network(NetworkBase):
             max_score = maxes[0][0, :, 1]
             max_id = maxes[1][0, :, 1]
             anchors_pred = transformed_anchors[0, max_id, :]
+            max_id = max_id.to(obj_indices.device)
             obj_indices = obj_indices[0, max_id, :]
 
             # NMS with IoU=0.5
             #nms_ids = nms(torch.cat([anchors_pred, max_score.unsqueeze(1)], dim=1), 0.5)
             nms_ids = torchvision.ops.boxes.nms(anchors_pred, max_score, 0.5)
             max_score = max_score[nms_ids]
+            nms_ids = nms_ids.to(max_id.device)
             max_id = max_id[nms_ids]
             anchors_pred = anchors_pred[nms_ids]
             obj_indices = obj_indices[nms_ids]

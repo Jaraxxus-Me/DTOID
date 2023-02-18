@@ -60,7 +60,7 @@ if __name__ == '__main__':
         scene_id = linemod_model
         scene = os.path.join(dataset_path, scene_id)
         gt_path = os.path.join(scene, "gt.yml")
-        gt = yaml.load(open(gt_path, "r"))
+        gt = yaml.safe_load(open(gt_path, "r"))
 
         # RGB image paths
         files = [os.path.join(scene, "rgb", x) for x in os.listdir(os.path.join(scene, "rgb")) if ".png" in x]
@@ -84,12 +84,8 @@ if __name__ == '__main__':
         # features for all templates (240)
         template_list = []
         template_global_list = []
-        template_ratios_list = []
-
         batch_size = 10
         temp_batch_local = []
-        temp_batch_global = []
-        temp_batch_ratios = []
         iteration = 0
 
         for t in tqdm(template_paths):
@@ -164,25 +160,6 @@ if __name__ == '__main__':
             pred_bbox_np = top_k_bboxes.cpu().numpy()
             pred_template_ids = top_k_template_ids[:, 0].long().cpu().numpy()
             template_z_values = pose_z_values[pred_template_ids]
-
-            
-            if not no_filter_z:
-            
-                pred_w_np = pred_bbox_np[:, 2] - pred_bbox_np[:, 0]
-                pred_h_np = pred_bbox_np[:, 3] - pred_bbox_np[:, 1]
-                pred_max_dim_np = np.stack([pred_w_np, pred_h_np]).transpose().max(axis=1)
-                pred_z = (124 / pred_max_dim_np) * -template_z_values
-
-                # Filter based on predicted Z values
-                pred_z_conds = (pred_z > 0.4) & (pred_z < 2)
-                pred_z_conds_ids = numpy.where(pred_z_conds)[0]
-
-                pred_scores_np = pred_scores_np[pred_z_conds_ids]
-                pred_bbox_np = pred_bbox_np[pred_z_conds_ids]
-                pred_template_ids = pred_template_ids[pred_z_conds_ids]
-                pred_z = pred_z[pred_z_conds_ids]
-
-
             # Keep top 1 (eval)
             pred_scores_np = pred_scores_np[:1]
             pred_bbox_np = pred_bbox_np[:1]

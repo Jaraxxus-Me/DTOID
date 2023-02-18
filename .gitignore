@@ -2,3 +2,7 @@ env/*
 model.pth.tar
 __pycache__/*
 .idea/*
+pretrained/
+data/
+.vscode/
+log
