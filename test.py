@@ -120,15 +120,6 @@ def test(dataloader, model, log):
             img, template_list, template_global_list, topk=top_k_num)
         pred_res = torch.cat([top_k_bboxes, top_k_scores.unsqueeze(1)], dim=1)
         pred_res_np = pred_res.cpu().numpy()
-        # save res
-        # if len(pred_bbox_np) > 0:
-        #     # x1, y1, x2, y2 = pred_bbox_np
-        #     # temp_score = pred_scores_np
-        #     # x1 = int(x1 / network_w * img_w)
-        #     # x2 = int(x2 / network_w * img_w)
-        #     # y1 = int(y1 / network_h * img_h)
-        #     # y2 = int(y2 / network_h * img_h)
-        #     res = np.concatenate([x1, y1, x2, y2, temp_score], axis=1)
         predictions[int(query['img_id'])] = pred_res_np
 
     return predictions

@@ -88,27 +88,7 @@ class ClipBoxes(nn.Module):
         return boxes
 
 
-#def nms(dets, thresh):
-#    "Dispatch to either CPU or GPU NMS implementations.\
-#    Accept dets as tensor"""
-#    return pth_nms(dets, thresh)
-
-normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
-
-
-IMG_SIZE = (480, 640)
-HEATMAP_SIZE = (29, 39)
-TEMPLATE_SIZE = 124
-
-PREPROCESS = [transforms.Compose([transforms.Resize(IMG_SIZE[0]), transforms.ToTensor(), normalize]),
-              transforms.Compose([transforms.Resize(TEMPLATE_SIZE), transforms.ToTensor(), normalize]),
-              transforms.Compose([transforms.Resize(TEMPLATE_SIZE), transforms.ToTensor()]),
-              transforms.Compose([transforms.Resize(TEMPLATE_SIZE), transforms.ToTensor(), normalize]),
-              transforms.Compose([transforms.Resize(TEMPLATE_SIZE), transforms.ToTensor()])
-              ]
+IMG_SIZE = (512, 512)
 
 eps = 0.00001
 
@@ -440,6 +420,10 @@ class Network(NetworkBase):
     def forward(self, image, template, template_mask, global_template, global_template_mask):
 
         heatmaps_array = []
+
+        local_ind = int(np.random.choice(range(1, template.shape[1]), 1))
+        template = template[:, local_ind]
+        template_mask = template_mask[:, local_ind]
 
         template_with_mask = torch.cat([template, template_mask], dim=1)
         global_template_with_mask = torch.cat([global_template, global_template_mask], dim=1)
