@@ -20,7 +20,7 @@ def train_parser():
                         help='number of batch size')
     parser.add_argument('--epochs', type=int, default=50,
                         help='number of epochs')
-    parser.add_argument('--valid_freq', type=int, default=10000,
+    parser.add_argument('--valid_freq', type=int, default=1,
                         help='number of epochs')
     parser.add_argument('--lr', type=float, default=1e-4,
                         help='number of epochs')

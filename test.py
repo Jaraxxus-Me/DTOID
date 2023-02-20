@@ -44,7 +44,7 @@ def main():
         if os.path.isfile(args.resume):
             log.info("=> loading checkpoint '{}'".format(args.resume))
             checkpoint = torch.load(args.resume, map_location=lambda storage, loc: storage)
-            model.load_state_dict(checkpoint["state_dict"])
+            model.load_state_dict(checkpoint['model'])
             model = model.cuda()
             log.info("=> loaded checkpoint '{}'".format(args.resume))
         else:

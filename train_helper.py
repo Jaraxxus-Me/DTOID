@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from torchvision import ops
 import numpy as np
 import scipy
+from tqdm import tqdm
 
 def adjust_lr(args, optimizer, epoch):
     if epoch <= 20:
@@ -161,7 +162,58 @@ def focal_l1_loss(classification_preds, regression_preds, classification_targets
     classification_loss /= sum(valid_mask)
 
     return classification_loss, regression_loss
-   
+
+def eval_detection(ValidLoader, model, n_iter):
+    model.eval()
+    progress_bar = tqdm(ValidLoader, desc="Iter {}".format(n_iter), dynamic_ncols=True)
+    for b_i, data in enumerate(progress_bar):
+        # template
+        temp = data[0].cuda()
+        mask = data[1].cuda()
+        template = temp
+        template_mask = mask
+        template_with_mask = torch.cat([template, template_mask], dim=2)
+        num_templates = template_with_mask.shape[1]
+        iteration = 0
+        # features for all templates (240)
+        template_list = []
+        template_global_list = []
+        batch_size = 10
+        temp_batch_local = []
+        iteration = 0
+        for i in range(num_templates):
+            template_img = template_with_mask[:, i]
+            template_img = template_img.cuda()
+            template_feature = model.compute_template_local(template_img)
+            # Create mini-batches of templates
+            if iteration == 0:
+                temp_batch_local = template_feature
+
+                template_feature_global = model.compute_template_global(template_img)
+                template_global_list.append(template_feature_global)
+
+            elif iteration % (batch_size) == 0:
+                template_list.append(temp_batch_local)
+                temp_batch_local = template_feature
+
+            elif iteration == (num_templates - 1):
+                temp_batch_local = torch.cat([temp_batch_local, template_feature], dim=0)
+                template_list.append(temp_batch_local)
+
+            else:
+                temp_batch_local= torch.cat([temp_batch_local, template_feature], dim=0)
+
+            iteration += 1
+        # query image
+        query = data[2].cuda()
+        ann_info = data[3]
+        gt_boxes = ann_info['bboxes'].cuda()
+
+        top_k_num = 500
+        top_k_scores, top_k_bboxes, top_k_template_ids = model.forward_all_templates(
+            query, template_list, template_global_list, topk=top_k_num)
+        pred_res = torch.cat([top_k_bboxes, top_k_scores.unsqueeze(1)], dim=1)
+        
 
 
 

@@ -127,21 +127,18 @@ def train(TrainLoader, ValidLoader, model, optimizer, log, epoch, writer):
         # Update the progress bar
         progress_bar.set_postfix({"Loss_avg": loss.item(), "batch_time": batch_time})
 
+        if n_iter > 0 and n_iter % args.valid_freq == 0:
+            with torch.no_grad():
+                ar = eval_detection(ValidLoader, model, n_iter, writer)
+
+            log.info("Saving new checkpoint.")
+            savefilename = args.savepath + '/checkpoint.tar'
+            save_checkpoint(model, optimizer, savefilename)
+            global cur_max_psnr
+
     final_loss = _loss.avg
     epoch_time = time.time() - start_time
     logging.info("Epoch {} completed in {:.2f} seconds. Final loss: {:.4f}".format(epoch, epoch_time, final_loss))
-    if n_iter > 0 and n_iter % args.valid_freq == 0:
-        # with torch.no_grad():
-        #     _ = test_reconstruction(ValidLoader, encoder_3d, decoder, rotate, rotate_inv,
-        #                         log, epoch, n_iter, writer)
-        #     output_dir = visualize_synthesis(args, ValidLoader, encoder_3d,
-        #                                      decoder, rotate, rotate_inv, log, n_iter)
-        #     avg_psnr, _, _ = test_synthesis(output_dir, log, epoch)
-
-        log.info("Saving new checkpoint.")
-        savefilename = args.savepath + '/checkpoint.tar'
-        save_checkpoint(model, optimizer, savefilename)
-        global cur_max_psnr
 
 if __name__ == '__main__':
     main()
