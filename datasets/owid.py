@@ -33,13 +33,13 @@ class OWIDDataset(Dataset):
         if train:
             anno = os.path.join(args.data_path, 'val_annotations.json')
             self.coco = COCO(anno)
-            img_scale = 100
-            ins_scale = 100
+            img_scale = 1
+            ins_scale = 1
         else:
             anno = os.path.join(args.data_path, 'val_annotations.json')
             self.coco = COCO(anno)
-            img_scale = 2000
-            ins_scale = 2000
+            img_scale = 1
+            ins_scale = 1
         self.img_ids = np.load(anno[:-5]+"_0.npy")
         self.img_ids = self.img_ids[:img_scale]
         self.obj_ids = self.coco.getCatIds()

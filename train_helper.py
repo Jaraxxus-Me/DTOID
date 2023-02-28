@@ -85,16 +85,26 @@ def bbox_transform(anchors, targets):
     Calculates the regression targets for the positive anchors.
 
     Args:
-        anchors: a tensor of shape (num_anchors, 4) representing the positive anchors
-        targets: a tensor of shape (num_anchors, 4) representing the ground truth boxes corresponding to the positive anchors
+        anchors: a tensor of shape (num_anchors, 4) representing the positive anchors, x1 y1 x2 y2
+        targets: a tensor of shape (num_anchors, 4) representing the ground truth boxes corresponding to the positive anchors, x1 y1 x2 y2
 
     Returns:
         regression_targets: a tensor of shape (num_anchors, 4) representing the regression targets for each anchor
     """
-    tx = (targets[:, 0] - anchors[:, 0]) / anchors[:, 2]
-    ty = (targets[:, 1] - anchors[:, 1]) / anchors[:, 3]
-    tw = torch.log(targets[:, 2] / anchors[:, 2])
-    th = torch.log(targets[:, 3] / anchors[:, 3])
+    a_widths = anchors[:, 2] - anchors[:, 0]
+    a_heights = anchors[:, 3] - anchors[:, 1]
+    a_ctr_x = anchors[:, 0] + 0.5 * a_widths
+    a_ctr_y = anchors[:, 1] + 0.5 * a_heights
+
+    t_widths = targets[:, 2] - targets[:, 0]
+    t_heights = targets[:, 3] - targets[:, 1]
+    t_ctr_x = targets[:, 0] + 0.5 * t_widths
+    t_ctr_y = targets[:, 1] + 0.5 * t_heights
+
+    tx = (t_ctr_x - a_ctr_x) / a_widths
+    ty = (t_ctr_y - a_ctr_y) / a_heights
+    tw = torch.log(t_widths / a_widths)
+    th = torch.log(t_heights / a_heights)
 
     regression_targets = torch.stack((tx, ty, tw, th), dim=1)
 
@@ -133,11 +143,12 @@ def focal_l1_loss(classification_preds, regression_preds, classification_targets
     regression_targets = regression_targets[valid_mask]
 
     pos_mask = (classification_targets == 0)
+    neg_mask = (classification_targets == 1)
 
     # Calculate the classification loss
-    classification_loss = F.cross_entropy(classification_preds, classification_targets, reduction='none')
-    classification_loss = torch.sum(classification_loss)
-
+    classification_loss_pos = F.cross_entropy(classification_preds[pos_mask], classification_targets[pos_mask], reduction='mean')
+    classification_loss_neg = F.cross_entropy(classification_preds[neg_mask], classification_targets[neg_mask], reduction='mean')
+    classification_loss = (classification_loss_pos+classification_loss_neg)/2
     # Calculate the focal loss weighting
     # alpha_factor = torch.where(torch.eq(classification_targets, 1), torch.ones_like(classification_targets) * alpha, 1.0 - (torch.ones_like(classification_targets) * alpha))
     # focal_weight = torch.where(torch.eq(classification_targets, 1), 1.0 - classification_preds, classification_preds)
@@ -145,7 +156,6 @@ def focal_l1_loss(classification_preds, regression_preds, classification_targets
 
     # Calculate the regression loss
     regression_loss = F.smooth_l1_loss(regression_preds[pos_mask], regression_targets[pos_mask], reduction='mean', beta=smooth_l1_sigma)
-    regression_loss = torch.sum(regression_loss)
 
     # Weight the losses based on anchor labels
     # positive_mask = (classification_targets == 1)
@@ -159,13 +169,14 @@ def focal_l1_loss(classification_preds, regression_preds, classification_targets
     # classification_weight = classification_weight / (num_positive_anchors + num_negative_anchors)
 
     # Calculate the final loss as the weighted sum of classification and regression losses
-    classification_loss /= sum(valid_mask)
 
     return classification_loss, regression_loss
 
 def eval_detection(ValidLoader, model, n_iter):
     model.eval()
     progress_bar = tqdm(ValidLoader, desc="Iter {}".format(n_iter), dynamic_ncols=True)
+    n_boxes = len(ValidLoader)
+    n_match = 0
     for b_i, data in enumerate(progress_bar):
         # template
         temp = data[0].cuda()
@@ -173,6 +184,7 @@ def eval_detection(ValidLoader, model, n_iter):
         template = temp
         template_mask = mask
         template_with_mask = torch.cat([template, template_mask], dim=2)
+        template_with_mask = template_with_mask[:, 0:2]
         num_templates = template_with_mask.shape[1]
         iteration = 0
         # features for all templates (240)
@@ -212,7 +224,12 @@ def eval_detection(ValidLoader, model, n_iter):
         top_k_num = 500
         top_k_scores, top_k_bboxes, top_k_template_ids = model.forward_all_templates(
             query, template_list, template_global_list, topk=top_k_num)
-        pred_res = torch.cat([top_k_bboxes, top_k_scores.unsqueeze(1)], dim=1)
+        pred_res = top_k_bboxes[0].unsqueeze(0)
+        gt_boxes = gt_boxes.squeeze(0)
+        iou = ops.box_iou(pred_res, gt_boxes)
+        if float(iou.squeeze())>0.5:
+            n_match += 1
+    return n_match/n_boxes
         
 
 

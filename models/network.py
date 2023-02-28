@@ -121,7 +121,8 @@ class ClassificationModel(nn.Module):
         out = self.conv4(out)
         out = self.act4(out)
         out = self.output(out)
-        out = self.output_act(out)
+        # use cross entropy loss, no need activate
+        # out = self.output_act(out)
         out1 = out.permute(0, 2, 3, 1)
         batch_size, width, height, channels = out1.shape
         out2 = out1.view(batch_size, width, height, self.num_anchors, self.num_classes)
@@ -466,6 +467,7 @@ class Network(NetworkBase):
                 #stage 2 - detections
                 anchors = self.anchors([[xcors_feature.size(2), xcors_feature.size(3)]])
                 classifications, class_heatmap = self.classification(xcors_feature)
+                classifications = F.softmax(classifications, dim=-1)
                 regression = self.regression(xcors_feature)
 
                 if i == 0:
@@ -490,15 +492,14 @@ class Network(NetworkBase):
             transformed_anchors = self.clipBoxes(transformed_anchors, image)
 
             classifications = class_outputs.contiguous().view(1, -1, 2)
-            regression = reg_outputs.contiguous().view(1, -1, 2)
             transformed_anchors = transformed_anchors.view(1, -1, 4)
             obj_indices = obj_indices.contiguous().view(1, -1, 1)
 
 
             # Keep Top 1000
             maxes = torch.topk(classifications, 1000, dim=1)
-            max_score = maxes[0][0, :, 1]
-            max_id = maxes[1][0, :, 1]
+            max_score = maxes[0][0, :, 0]
+            max_id = maxes[1][0, :, 0]
             anchors_pred = transformed_anchors[0, max_id, :]
             max_id = max_id.to(obj_indices.device)
             obj_indices = obj_indices[0, max_id, :]

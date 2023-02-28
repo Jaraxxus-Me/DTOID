@@ -14,13 +14,13 @@ def train_parser():
                         help='Path for checkpoints and logs')
     parser.add_argument('--resume', type=str, default='',
                         help='Checkpoint file to resume')
-    parser.add_argument('--worker', type=int, default=16,
+    parser.add_argument('--worker', type=int, default=1,
                         help='number of dataloader threads')
-    parser.add_argument('--bs', type=int, default=16,
+    parser.add_argument('--bs', type=int, default=1,
                         help='number of batch size')
     parser.add_argument('--epochs', type=int, default=50,
                         help='number of epochs')
-    parser.add_argument('--valid_freq', type=int, default=1,
+    parser.add_argument('--valid_freq', type=int, default=48,
                         help='number of epochs')
     parser.add_argument('--lr', type=float, default=1e-4,
                         help='number of epochs')
