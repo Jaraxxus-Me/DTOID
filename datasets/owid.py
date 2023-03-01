@@ -31,10 +31,10 @@ class OWIDDataset(Dataset):
         super().__init__()
         # query
         if train:
-            anno = os.path.join(args.data_path, 'val_annotations.json')
+            anno = os.path.join(args.data_path, 'train_annotations.json')
             self.coco = COCO(anno)
-            img_scale = 500
-            ins_scale = 500
+            img_scale = 55000
+            ins_scale = 180000
         else:
             anno = os.path.join(args.data_path, 'val_annotations.json')
             self.coco = COCO(anno)

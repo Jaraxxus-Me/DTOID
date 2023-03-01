@@ -10,9 +10,9 @@ def test_parser():
                         help='Path of the dataset')
     parser.add_argument('--support_path', default='data/BOP/ycbv/test_video',
                         help='Path of the dataset')
-    parser.add_argument('--savepath', type=str, default='log/test1',
+    parser.add_argument('--savepath', type=str, default='log/test2',
                         help='Path for checkpoints and logs')
-    parser.add_argument('--resume', type=str, default='log/train0/checkpoint.tar',
+    parser.add_argument('--resume', type=str, default='log/train3/checkpoint_3.tar',
                         help='Checkpoint file to resume')
     parser.add_argument('--worker', type=int, default=8,
                         help='number of dataloader threads')

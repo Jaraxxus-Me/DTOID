@@ -5,10 +5,10 @@ import numpy as np
 import scipy
 from tqdm import tqdm
 
-def adjust_lr(args, optimizer, epoch):
-    if epoch <= 20:
+def adjust_lr(args, optimizer, iter):
+    if iter <= 80000:
         lr = args.lr
-    elif epoch <= 40:
+    elif iter <= 200000:
         lr = args.lr * 0.1
     else:
         lr = args.lr * 0.01

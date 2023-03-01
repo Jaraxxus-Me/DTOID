@@ -84,7 +84,7 @@ def train(TrainLoader, ValidLoader, model, optimizer, log, epoch, writer):
         model.train()
         n_iter = b_i + n_b * epoch
         # lr adjustment
-        adjust_lr(args, optimizer, epoch)
+        adjust_lr(args, optimizer, n_iter)
         # template
         temp = data[0].cuda()
         mask = data[1].cuda()
@@ -132,7 +132,7 @@ def train(TrainLoader, ValidLoader, model, optimizer, log, epoch, writer):
             ar = eval_detection(ValidLoader, model, n_iter)
         writer.add_scalar('Eva Recall (Seg)', ar, n_iter)
         log.info("Saving new checkpoint.")
-        savefilename = args.savepath + '/checkpoint.tar'
+        savefilename = args.savepath + '/checkpoint_{}.tar'.format(epoch)
         save_checkpoint(model, optimizer, savefilename)
 
     final_loss = _loss.avg
